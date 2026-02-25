@@ -1,3 +1,4 @@
+import { solveTridiagonal } from './MathUtils';
 import { Trajectory, Waypoint } from './types';
 
 interface SplineCoeffs {
@@ -34,18 +35,7 @@ function computeCoeffs(times: number[], values: number[]): SplineCoeffs[] {
     }
 
     // Thomas algorithm
-    const c2 = [...upper];
-    const d2 = [...rhs];
-    for (let i = 1; i < size; i++) {
-      const w = lower[i] / diag[i - 1];
-      diag[i] -= w * c2[i - 1];
-      d2[i] -= w * d2[i - 1];
-    }
-    const x = new Array<number>(size).fill(0);
-    x[size - 1] = d2[size - 1] / diag[size - 1];
-    for (let i = size - 2; i >= 0; i--) {
-      x[i] = (d2[i] - c2[i] * x[i + 1]) / diag[i];
-    }
+    const x = solveTridiagonal(lower, diag, upper, rhs);
     for (let i = 0; i < size; i++) {
       M[i + 1] = x[i];
     }
@@ -78,6 +68,39 @@ export class CubicSplineTrajectory implements Trajectory {
 
   getDuration(): number {
     return this.waypoints[this.waypoints.length - 1].time;
+  }
+
+  sampleDerivative(t: number): number[] {
+    const first = this.waypoints[0];
+    const last = this.waypoints[this.waypoints.length - 1];
+
+    // Binary search for segment
+    let lo = 0;
+    let hi = this.waypoints.length - 2;
+
+    if (t <= first.time) {
+      return this.coeffsByDim.map((coeffs) => coeffs[0].b);
+    }
+    if (t >= last.time) {
+      const seg = this.waypoints.length - 2;
+      const h = last.time - this.waypoints[seg].time;
+      return this.coeffsByDim.map((coeffs) => {
+        const { b, c, d } = coeffs[seg];
+        return b + 2 * c * h + 3 * d * h * h;
+      });
+    }
+
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (this.waypoints[mid].time <= t) lo = mid;
+      else hi = mid - 1;
+    }
+
+    const dt = t - this.waypoints[lo].time;
+    return this.coeffsByDim.map((coeffs) => {
+      const { b, c, d } = coeffs[lo];
+      return b + 2 * c * dt + 3 * d * dt * dt;
+    });
   }
 
   sample(t: number): number[] {

@@ -57,3 +57,35 @@ export function evaluateCubic1D(coeffs: CubicCoeffs, t: number): number {
   const { a, b, c, d } = coeffs;
   return a * t * t * t + b * t * t + c * t + d;
 }
+
+/**
+ * Solves a tridiagonal linear system A*x = rhs using the Thomas algorithm.
+ * @param lower - subdiagonal coefficients (lower[0] is ignored)
+ * @param diag  - main diagonal coefficients (modified in place; pass a copy if needed)
+ * @param upper - superdiagonal coefficients (upper[n-1] is ignored)
+ * @param rhs   - right-hand side vector (modified in place; pass a copy if needed)
+ * @returns solution vector x
+ */
+export function solveTridiagonal(
+  lower: number[],
+  diag: number[],
+  upper: number[],
+  rhs: number[],
+): number[] {
+  const n = diag.length;
+  const d = [...diag];
+  const r = [...rhs];
+
+  for (let i = 1; i < n; i++) {
+    const w = lower[i] / d[i - 1];
+    d[i] -= w * upper[i - 1];
+    r[i] -= w * r[i - 1];
+  }
+
+  const x = new Array<number>(n).fill(0);
+  x[n - 1] = r[n - 1] / d[n - 1];
+  for (let i = n - 2; i >= 0; i--) {
+    x[i] = (r[i] - upper[i] * x[i + 1]) / d[i];
+  }
+  return x;
+}

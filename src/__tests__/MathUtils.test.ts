@@ -4,6 +4,7 @@ import {
   cubicCoeffs1D,
   evaluateCubic1D,
   linearInterpolate1D,
+  solveTridiagonal,
 } from '../MathUtils';
 
 describe('linearInterpolate1D', () => {
@@ -59,6 +60,47 @@ describe('cubicCoeffs1D', () => {
     expect(coeffs.d).toBe(0);
     // f(1) = a + b + c + d = 1
     expect(coeffs.a + coeffs.b + coeffs.c + coeffs.d).toBeCloseTo(1);
+  });
+});
+
+describe('solveTridiagonal', () => {
+  it('solves a simple 3x3 tridiagonal system', () => {
+    // System:
+    //  2x0 +  x1         = 1
+    //   x0 + 3x1 +  x2  = 2
+    //          x1 + 2x2 = 3
+    const lower = [0, 1, 1];
+    const diag = [2, 3, 2];
+    const upper = [1, 1, 0];
+    const rhs = [1, 2, 3];
+    const x = solveTridiagonal(lower, diag, upper, rhs);
+    // Verify A*x = rhs
+    expect(diag[0] * x[0] + upper[0] * x[1]).toBeCloseTo(rhs[0], 10);
+    expect(lower[1] * x[0] + diag[1] * x[1] + upper[1] * x[2]).toBeCloseTo(rhs[1], 10);
+    expect(lower[2] * x[1] + diag[2] * x[2]).toBeCloseTo(rhs[2], 10);
+  });
+
+  it('solves a diagonal system (trivial case)', () => {
+    const lower = [0, 0, 0];
+    const diag = [2, 4, 5];
+    const upper = [0, 0, 0];
+    const rhs = [4, 8, 10];
+    const x = solveTridiagonal(lower, diag, upper, rhs);
+    expect(x[0]).toBeCloseTo(2, 10);
+    expect(x[1]).toBeCloseTo(2, 10);
+    expect(x[2]).toBeCloseTo(2, 10);
+  });
+
+  it('does not mutate input arrays', () => {
+    const lower = [0, 1, 1];
+    const diag = [2, 3, 2];
+    const upper = [1, 1, 0];
+    const rhs = [1, 2, 3];
+    const diagCopy = [...diag];
+    const rhsCopy = [...rhs];
+    solveTridiagonal(lower, diag, upper, rhs);
+    expect(diag).toEqual(diagCopy);
+    expect(rhs).toEqual(rhsCopy);
   });
 });
 
