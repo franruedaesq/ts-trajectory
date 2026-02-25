@@ -43,4 +43,17 @@ describe('LinearTrajectory', () => {
     const traj = new LinearTrajectory(waypoints);
     expect(traj.sample(100)).toEqual([8, 10, 12]);
   });
+
+  it('works for N-dimensional waypoints', () => {
+    const dims = 6;
+    const start = Array.from({ length: dims }, (_, i) => i * 1.0);
+    const end = Array.from({ length: dims }, (_, i) => i * 2.0);
+    const traj = new LinearTrajectory([
+      { time: 0, positions: start },
+      { time: 1, positions: end },
+    ]);
+    const mid = traj.sample(0.5);
+    expect(mid).toHaveLength(dims);
+    mid.forEach((v, i) => expect(v).toBeCloseTo(start[i] + 0.5 * (end[i] - start[i])));
+  });
 });
