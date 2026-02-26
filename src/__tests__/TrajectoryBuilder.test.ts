@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CubicSplineTrajectory } from '../CubicSplineTrajectory';
 import { LinearTrajectory } from '../LinearTrajectory';
-import { TrajectoryBuilder } from '../TrajectoryPlanner';
+import { TrajectoryBuilder } from '../TrajectoryBuilder';
 import { isPlannerConfig, isTrajectory, isWaypoint } from '../types';
 
 describe('TrajectoryBuilder', () => {
