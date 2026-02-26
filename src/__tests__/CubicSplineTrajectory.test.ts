@@ -39,6 +39,16 @@ describe('CubicSplineTrajectory', () => {
     expect(isFinite(cubicMid)).toBe(true);
   });
 
+  it('throws if consecutive waypoint times are identical', () => {
+    expect(() =>
+      new CubicSplineTrajectory([
+        { time: 0, positions: [0] },
+        { time: 1, positions: [1] },
+        { time: 1, positions: [2] },
+      ]),
+    ).toThrow('Waypoint times must be strictly increasing.');
+  });
+
   it('degrades gracefully to linear with 2 waypoints', () => {
     const traj = new CubicSplineTrajectory([
       { time: 0, positions: [0] },

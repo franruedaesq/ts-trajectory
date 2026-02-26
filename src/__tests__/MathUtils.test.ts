@@ -73,11 +73,14 @@ describe('solveTridiagonal', () => {
     const diag = [2, 3, 2];
     const upper = [1, 1, 0];
     const rhs = [1, 2, 3];
+    // Save originals for verification since arrays are mutated in place
+    const origDiag = [...diag];
+    const origRhs = [...rhs];
     const x = solveTridiagonal(lower, diag, upper, rhs);
     // Verify A*x = rhs
-    expect(diag[0] * x[0] + upper[0] * x[1]).toBeCloseTo(rhs[0], 10);
-    expect(lower[1] * x[0] + diag[1] * x[1] + upper[1] * x[2]).toBeCloseTo(rhs[1], 10);
-    expect(lower[2] * x[1] + diag[2] * x[2]).toBeCloseTo(rhs[2], 10);
+    expect(origDiag[0] * x[0] + upper[0] * x[1]).toBeCloseTo(origRhs[0], 10);
+    expect(lower[1] * x[0] + origDiag[1] * x[1] + upper[1] * x[2]).toBeCloseTo(origRhs[1], 10);
+    expect(lower[2] * x[1] + origDiag[2] * x[2]).toBeCloseTo(origRhs[2], 10);
   });
 
   it('solves a diagonal system (trivial case)', () => {
@@ -91,7 +94,7 @@ describe('solveTridiagonal', () => {
     expect(x[2]).toBeCloseTo(2, 10);
   });
 
-  it('does not mutate input arrays', () => {
+  it('mutates diag and rhs arrays in place', () => {
     const lower = [0, 1, 1];
     const diag = [2, 3, 2];
     const upper = [1, 1, 0];
@@ -99,8 +102,19 @@ describe('solveTridiagonal', () => {
     const diagCopy = [...diag];
     const rhsCopy = [...rhs];
     solveTridiagonal(lower, diag, upper, rhs);
-    expect(diag).toEqual(diagCopy);
-    expect(rhs).toEqual(rhsCopy);
+    expect(diag).not.toEqual(diagCopy);
+    expect(rhs).not.toEqual(rhsCopy);
+  });
+
+  it('throws on a near-zero pivot', () => {
+    // A system where the first diagonal element is 0 causes division by zero
+    const lower = [0, 1];
+    const diag = [0, 2];
+    const upper = [1, 0];
+    const rhs = [1, 2];
+    expect(() => solveTridiagonal(lower, diag, upper, rhs)).toThrow(
+      'solveTridiagonal: near-zero pivot at index 0',
+    );
   });
 });
 
