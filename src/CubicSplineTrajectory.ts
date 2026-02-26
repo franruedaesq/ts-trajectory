@@ -58,6 +58,7 @@ export class CubicSplineTrajectory implements Trajectory {
   private readonly _result: number[];
   private readonly _derivativeResult: number[];
   private readonly _secondDerivativeResult: number[];
+  private _lastSegmentIndex: number = 0;
 
   constructor(waypoints: Waypoint[]) {
     for (let i = 1; i < waypoints.length; i++) {
@@ -81,6 +82,22 @@ export class CubicSplineTrajectory implements Trajectory {
     return this.waypoints[this.waypoints.length - 1].time;
   }
 
+  private _findSegment(t: number): number {
+    const idx = this._lastSegmentIndex;
+    if (idx < this.waypoints.length - 1 && this.waypoints[idx].time <= t && t < this.waypoints[idx + 1].time) {
+      return idx;
+    }
+    let lo = 0;
+    let hi = this.waypoints.length - 2;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (this.waypoints[mid].time <= t) lo = mid;
+      else hi = mid - 1;
+    }
+    this._lastSegmentIndex = lo;
+    return lo;
+  }
+
   sampleDerivative(t: number): number[] {
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
@@ -100,14 +117,8 @@ export class CubicSplineTrajectory implements Trajectory {
       return this._derivativeResult;
     }
 
-    // Binary search for segment
-    let lo = 0;
-    let hi = this.waypoints.length - 2;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (this.waypoints[mid].time <= t) lo = mid;
-      else hi = mid - 1;
-    }
+    // Find segment using cache, fall back to binary search
+    const lo = this._findSegment(t);
 
     const dt = t - this.waypoints[lo].time;
     for (let i = 0; i < dims; i++) {
@@ -136,14 +147,8 @@ export class CubicSplineTrajectory implements Trajectory {
       return this._secondDerivativeResult;
     }
 
-    // Binary search for segment
-    let lo = 0;
-    let hi = this.waypoints.length - 2;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (this.waypoints[mid].time <= t) lo = mid;
-      else hi = mid - 1;
-    }
+    // Find segment using cache, fall back to binary search
+    const lo = this._findSegment(t);
 
     const dt = t - this.waypoints[lo].time;
     for (let i = 0; i < dims; i++) {
@@ -167,14 +172,8 @@ export class CubicSplineTrajectory implements Trajectory {
       return this._result;
     }
 
-    // Binary search for segment
-    let lo = 0;
-    let hi = this.waypoints.length - 2;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (this.waypoints[mid].time <= t) lo = mid;
-      else hi = mid - 1;
-    }
+    // Find segment using cache, fall back to binary search
+    const lo = this._findSegment(t);
 
     const dt = t - this.waypoints[lo].time;
     for (let i = 0; i < dims; i++) {

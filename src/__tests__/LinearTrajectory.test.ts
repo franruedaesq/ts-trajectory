@@ -56,4 +56,19 @@ describe('LinearTrajectory', () => {
     expect(mid).toHaveLength(dims);
     mid.forEach((v, i) => expect(v).toBeCloseTo(start[i] + 0.5 * (end[i] - start[i])));
   });
+
+  it('produces correct results for sequential (monotonically increasing) t queries', () => {
+    const traj = new LinearTrajectory(waypoints);
+    const times = [0.1, 0.2, 0.5, 0.9, 1.0, 1.5, 2.0, 2.5, 2.9];
+    for (const t of times) {
+      const result = traj.sample(t);
+      expect(result).toHaveLength(3);
+      result.forEach((v) => expect(isFinite(v)).toBe(true));
+    }
+    // Verify specific sequential values match expected interpolation
+    const traj2 = new LinearTrajectory(waypoints);
+    expect(traj2.sample(0.5)).toEqual([1, 2, 3]);
+    expect(traj2.sample(1.0)).toEqual([2, 4, 6]);
+    expect(traj2.sample(2.0)).toEqual([5, 7, 9]);
+  });
 });

@@ -116,4 +116,25 @@ describe('CubicSplineTrajectory', () => {
     const ref2 = traj.sampleDerivative(1.5);
     expect(ref1).toBe(ref2);
   });
+
+  it('produces correct results for sequential (monotonically increasing) t queries', () => {
+    const traj = new CubicSplineTrajectory(waypoints);
+    const times = [0.1, 0.3, 0.5, 0.9, 1.0, 1.2, 1.5, 2.0, 2.5, 2.9];
+    for (const t of times) {
+      const pos = traj.sample(t);
+      const deriv = traj.sampleDerivative(t);
+      const deriv2 = traj.sampleSecondDerivative(t);
+      expect(pos).toHaveLength(2);
+      expect(deriv).toHaveLength(2);
+      expect(deriv2).toHaveLength(2);
+      pos.forEach((v) => expect(isFinite(v)).toBe(true));
+    }
+    // Verify sequential results match single-query results
+    const traj2 = new CubicSplineTrajectory(waypoints);
+    const expected05 = [...traj2.sample(0.5)];
+    const traj3 = new CubicSplineTrajectory(waypoints);
+    traj3.sample(0.1);
+    traj3.sample(0.3);
+    expect(traj3.sample(0.5)).toEqual(expected05);
+  });
 });
