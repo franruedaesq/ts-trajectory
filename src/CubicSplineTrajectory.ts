@@ -60,6 +60,11 @@ export class CubicSplineTrajectory implements Trajectory {
   private readonly _secondDerivativeResult: number[];
 
   constructor(waypoints: Waypoint[]) {
+    for (let i = 1; i < waypoints.length; i++) {
+      if (waypoints[i].time <= waypoints[i - 1].time) {
+        throw new Error('Waypoint times must be strictly increasing.');
+      }
+    }
     this.waypoints = waypoints;
     const times = waypoints.map((w) => w.time);
     const dims = waypoints[0].positions.length;
