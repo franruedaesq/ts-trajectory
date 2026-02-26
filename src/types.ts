@@ -22,10 +22,10 @@ export interface PlannerConfig {
 export function isWaypoint(value: unknown): value is Waypoint {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  if (typeof v.time !== 'number') return false;
-  if (!Array.isArray(v.positions) || v.positions.length === 0 || !v.positions.every((p) => typeof p === 'number')) return false;
+  if (!Number.isFinite(v.time as number)) return false;
+  if (!Array.isArray(v.positions) || v.positions.length === 0 || !v.positions.every((p) => Number.isFinite(p))) return false;
   if (v.velocities !== undefined) {
-    if (!Array.isArray(v.velocities) || !v.velocities.every((p) => typeof p === 'number'))
+    if (!Array.isArray(v.velocities) || !v.velocities.every((p) => Number.isFinite(p)))
       return false;
   }
   return true;
@@ -44,14 +44,14 @@ export function isPlannerConfig(value: unknown): value is PlannerConfig {
   const v = value as Record<string, unknown>;
   if (v.interpolationType !== 'linear' && v.interpolationType !== 'cubic') return false;
   if (v.maxVelocity !== undefined) {
-    if (!Array.isArray(v.maxVelocity) || v.maxVelocity.length === 0 || !v.maxVelocity.every((x) => typeof x === 'number'))
+    if (!Array.isArray(v.maxVelocity) || v.maxVelocity.length === 0 || !v.maxVelocity.every((x) => Number.isFinite(x)))
       return false;
   }
   if (v.maxAcceleration !== undefined) {
     if (
       !Array.isArray(v.maxAcceleration) ||
       v.maxAcceleration.length === 0 ||
-      !v.maxAcceleration.every((x) => typeof x === 'number')
+      !v.maxAcceleration.every((x) => Number.isFinite(x))
     )
       return false;
   }

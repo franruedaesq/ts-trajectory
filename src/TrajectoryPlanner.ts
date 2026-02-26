@@ -4,10 +4,21 @@ import { PlannerConfig, Trajectory, Waypoint } from './types';
 
 const KINEMATIC_SAMPLE_COUNT = 100;
 
-export class TrajectoryPlanner {
+/**
+ * Builds a trajectory from waypoints and config.
+ * Throws if kinematic constraints (maxVelocity, maxAcceleration) are violated.
+ * Time-scaling to satisfy constraints is not yet implemented (V2 roadmap).
+ */
+export class TrajectoryBuilder {
   plan(waypoints: Waypoint[], config: PlannerConfig): Trajectory {
     if (waypoints.length < 2) {
       throw new Error('At least 2 waypoints are required.');
+    }
+
+    for (const waypoint of waypoints) {
+      if (waypoint.velocities !== undefined) {
+        throw new Error('Waypoint velocities are not yet supported in V1.');
+      }
     }
 
     const dims = waypoints[0].positions.length;

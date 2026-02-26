@@ -1,17 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { CubicSplineTrajectory } from '../CubicSplineTrajectory';
 import { LinearTrajectory } from '../LinearTrajectory';
-import { TrajectoryPlanner } from '../TrajectoryPlanner';
+import { TrajectoryBuilder } from '../TrajectoryPlanner';
 import { isPlannerConfig, isTrajectory, isWaypoint } from '../types';
 
-describe('TrajectoryPlanner', () => {
-  const planner = new TrajectoryPlanner();
+describe('TrajectoryBuilder', () => {
+  const planner = new TrajectoryBuilder();
 
   const waypoints = [
     { time: 0, positions: [0, 0] },
     { time: 1, positions: [1, 2] },
     { time: 2, positions: [3, 4] },
   ];
+
+  it('throws when a waypoint has velocities (not yet supported in V1)', () => {
+    expect(() =>
+      planner.plan(
+        [
+          { time: 0, positions: [0], velocities: [1] },
+          { time: 1, positions: [1] },
+        ],
+        { interpolationType: 'linear' },
+      ),
+    ).toThrow('Waypoint velocities are not yet supported in V1.');
+  });
 
   it('creates LinearTrajectory when interpolationType is linear', () => {
     const traj = planner.plan(waypoints, { interpolationType: 'linear' });
@@ -134,6 +146,26 @@ describe('isWaypoint', () => {
     expect(isWaypoint({ time: 0, positions: [0], velocities: ['a'] })).toBe(false);
   });
 
+  it('returns false when time is NaN', () => {
+    expect(isWaypoint({ time: NaN, positions: [0] })).toBe(false);
+  });
+
+  it('returns false when time is Infinity', () => {
+    expect(isWaypoint({ time: Infinity, positions: [0] })).toBe(false);
+  });
+
+  it('returns false when a position is NaN', () => {
+    expect(isWaypoint({ time: 0, positions: [NaN, 0] })).toBe(false);
+  });
+
+  it('returns false when a position is Infinity', () => {
+    expect(isWaypoint({ time: 0, positions: [Infinity, 0] })).toBe(false);
+  });
+
+  it('returns false when a velocity is NaN', () => {
+    expect(isWaypoint({ time: 0, positions: [0], velocities: [NaN] })).toBe(false);
+  });
+
   it('returns false when positions is an empty array', () => {
     expect(isWaypoint({ time: 0, positions: [] })).toBe(false);
   });
@@ -198,6 +230,18 @@ describe('isPlannerConfig', () => {
 
   it('returns false when maxAcceleration is not a number array', () => {
     expect(isPlannerConfig({ interpolationType: 'linear', maxAcceleration: [null] })).toBe(false);
+  });
+
+  it('returns false when maxVelocity contains NaN', () => {
+    expect(isPlannerConfig({ interpolationType: 'linear', maxVelocity: [NaN] })).toBe(false);
+  });
+
+  it('returns false when maxVelocity contains Infinity', () => {
+    expect(isPlannerConfig({ interpolationType: 'linear', maxVelocity: [Infinity] })).toBe(false);
+  });
+
+  it('returns false when maxAcceleration contains NaN', () => {
+    expect(isPlannerConfig({ interpolationType: 'linear', maxAcceleration: [NaN] })).toBe(false);
   });
 
   it('returns false when maxVelocity is an empty array', () => {
