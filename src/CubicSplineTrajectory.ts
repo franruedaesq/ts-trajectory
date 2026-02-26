@@ -55,6 +55,8 @@ function computeCoeffs(times: number[], values: number[]): SplineCoeffs[] {
 export class CubicSplineTrajectory implements Trajectory {
   private readonly waypoints: Waypoint[];
   private readonly coeffsByDim: SplineCoeffs[][];
+  private readonly _result: number[];
+  private readonly _derivativeResult: number[];
 
   constructor(waypoints: Waypoint[]) {
     this.waypoints = waypoints;
@@ -64,6 +66,8 @@ export class CubicSplineTrajectory implements Trajectory {
       const values = waypoints.map((w) => w.positions[dim]);
       return computeCoeffs(times, values);
     });
+    this._result = new Array(dims).fill(0);
+    this._derivativeResult = new Array(dims).fill(0);
   }
 
   getDuration(): number {
@@ -73,23 +77,25 @@ export class CubicSplineTrajectory implements Trajectory {
   sampleDerivative(t: number): number[] {
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
-
-    // Binary search for segment
-    let lo = 0;
-    let hi = this.waypoints.length - 2;
+    const dims = this._derivativeResult.length;
 
     if (t <= first.time) {
-      return this.coeffsByDim.map((coeffs) => coeffs[0].b);
+      for (let i = 0; i < dims; i++) this._derivativeResult[i] = this.coeffsByDim[i][0].b;
+      return this._derivativeResult;
     }
     if (t >= last.time) {
       const seg = this.waypoints.length - 2;
       const h = last.time - this.waypoints[seg].time;
-      return this.coeffsByDim.map((coeffs) => {
-        const { b, c, d } = coeffs[seg];
-        return b + 2 * c * h + 3 * d * h * h;
-      });
+      for (let i = 0; i < dims; i++) {
+        const { b, c, d } = this.coeffsByDim[i][seg];
+        this._derivativeResult[i] = b + 2 * c * h + 3 * d * h * h;
+      }
+      return this._derivativeResult;
     }
 
+    // Binary search for segment
+    let lo = 0;
+    let hi = this.waypoints.length - 2;
     while (lo < hi) {
       const mid = (lo + hi + 1) >> 1;
       if (this.waypoints[mid].time <= t) lo = mid;
@@ -97,18 +103,26 @@ export class CubicSplineTrajectory implements Trajectory {
     }
 
     const dt = t - this.waypoints[lo].time;
-    return this.coeffsByDim.map((coeffs) => {
-      const { b, c, d } = coeffs[lo];
-      return b + 2 * c * dt + 3 * d * dt * dt;
-    });
+    for (let i = 0; i < dims; i++) {
+      const { b, c, d } = this.coeffsByDim[i][lo];
+      this._derivativeResult[i] = b + 2 * c * dt + 3 * d * dt * dt;
+    }
+    return this._derivativeResult;
   }
 
   sample(t: number): number[] {
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
+    const dims = this._result.length;
 
-    if (t <= first.time) return [...first.positions];
-    if (t >= last.time) return [...last.positions];
+    if (t <= first.time) {
+      for (let i = 0; i < dims; i++) this._result[i] = first.positions[i];
+      return this._result;
+    }
+    if (t >= last.time) {
+      for (let i = 0; i < dims; i++) this._result[i] = last.positions[i];
+      return this._result;
+    }
 
     // Binary search for segment
     let lo = 0;
@@ -120,9 +134,10 @@ export class CubicSplineTrajectory implements Trajectory {
     }
 
     const dt = t - this.waypoints[lo].time;
-    return this.coeffsByDim.map((coeffs) => {
-      const { a, b, c, d } = coeffs[lo];
-      return a + b * dt + c * dt * dt + d * dt * dt * dt;
-    });
+    for (let i = 0; i < dims; i++) {
+      const { a, b, c, d } = this.coeffsByDim[i][lo];
+      this._result[i] = a + b * dt + c * dt * dt + d * dt * dt * dt;
+    }
+    return this._result;
   }
 }
