@@ -133,6 +133,10 @@ describe('isWaypoint', () => {
   it('returns false when velocities is not a number array', () => {
     expect(isWaypoint({ time: 0, positions: [0], velocities: ['a'] })).toBe(false);
   });
+
+  it('returns false when positions is an empty array', () => {
+    expect(isWaypoint({ time: 0, positions: [] })).toBe(false);
+  });
 });
 
 describe('isTrajectory', () => {
@@ -194,5 +198,13 @@ describe('isPlannerConfig', () => {
 
   it('returns false when maxAcceleration is not a number array', () => {
     expect(isPlannerConfig({ interpolationType: 'linear', maxAcceleration: [null] })).toBe(false);
+  });
+
+  it('returns false when maxVelocity is an empty array', () => {
+    expect(isPlannerConfig({ interpolationType: 'linear', maxVelocity: [] })).toBe(false);
+  });
+
+  it('returns false when maxAcceleration is an empty array', () => {
+    expect(isPlannerConfig({ interpolationType: 'linear', maxAcceleration: [] })).toBe(false);
   });
 });
