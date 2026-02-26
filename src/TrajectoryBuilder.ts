@@ -2,8 +2,6 @@ import { CubicSplineTrajectory } from './CubicSplineTrajectory';
 import { LinearTrajectory } from './LinearTrajectory';
 import { PlannerConfig, Trajectory, Waypoint } from './types';
 
-const KINEMATIC_SAMPLE_COUNT = 100;
-
 /**
  * Builds a trajectory from waypoints and config.
  * Throws if kinematic constraints (maxVelocity, maxAcceleration) are violated.
@@ -61,17 +59,27 @@ export class TrajectoryBuilder {
     maxVelocity: number[],
   ): void {
     if (trajectory instanceof CubicSplineTrajectory) {
-      const startTime = waypoints[0].time;
-      const duration = trajectory.getDuration() - startTime;
-      for (let s = 0; s <= KINEMATIC_SAMPLE_COUNT; s++) {
-        const t = startTime + (s / KINEMATIC_SAMPLE_COUNT) * duration;
-        const vel = trajectory.sampleDerivative(t);
-        for (let dim = 0; dim < vel.length; dim++) {
-          if (Math.abs(vel[dim]) > maxVelocity[dim]) {
-            throw new Error(
-              `Trajectory exceeds maxVelocity in dimension ${dim}: ` +
-                `|${vel[dim]}| > ${maxVelocity[dim]} at t=${t}.`,
-            );
+      // Analytical O(1) validation per segment.
+      // f'(dt) = b + 2c*dt + 3d*dt^2 (quadratic); peak occurs at dt = -c/(3d) when d != 0.
+      const coeffsByDim = trajectory.getCoeffsByDim();
+      const dims = maxVelocity.length;
+      for (let seg = 0; seg < waypoints.length - 1; seg++) {
+        const h = waypoints[seg + 1].time - waypoints[seg].time;
+        for (let dim = 0; dim < dims; dim++) {
+          const { b, c, d } = coeffsByDim[dim][seg];
+          const checkPoints = [0, h];
+          if (d !== 0) {
+            const dtPeak = -c / (3 * d);
+            if (dtPeak > 0 && dtPeak < h) checkPoints.push(dtPeak);
+          }
+          for (const dt of checkPoints) {
+            const vel = b + 2 * c * dt + 3 * d * dt * dt;
+            if (Math.abs(vel) > maxVelocity[dim]) {
+              throw new Error(
+                `Trajectory exceeds maxVelocity in dimension ${dim}: ` +
+                  `|${vel}| > ${maxVelocity[dim]} in segment ${seg}.`,
+              );
+            }
           }
         }
       }
@@ -99,17 +107,22 @@ export class TrajectoryBuilder {
   ): void {
     // Linear trajectories have zero acceleration within segments; no validation needed.
     if (trajectory instanceof CubicSplineTrajectory) {
-      const startTime = waypoints[0].time;
-      const duration = trajectory.getDuration() - startTime;
-      for (let s = 0; s <= KINEMATIC_SAMPLE_COUNT; s++) {
-        const t = startTime + (s / KINEMATIC_SAMPLE_COUNT) * duration;
-        const accel = trajectory.sampleSecondDerivative(t);
-        for (let dim = 0; dim < accel.length; dim++) {
-          if (Math.abs(accel[dim]) > maxAcceleration[dim]) {
-            throw new Error(
-              `Trajectory exceeds maxAcceleration in dimension ${dim}: ` +
-                `|${accel[dim]}| > ${maxAcceleration[dim]} at t=${t}.`,
-            );
+      // Analytical O(1) validation per segment.
+      // f''(dt) = 2c + 6d*dt (linear); peak occurs at segment boundaries.
+      const coeffsByDim = trajectory.getCoeffsByDim();
+      const dims = maxAcceleration.length;
+      for (let seg = 0; seg < waypoints.length - 1; seg++) {
+        const h = waypoints[seg + 1].time - waypoints[seg].time;
+        for (let dim = 0; dim < dims; dim++) {
+          const { c, d } = coeffsByDim[dim][seg];
+          for (const dt of [0, h]) {
+            const accel = 2 * c + 6 * d * dt;
+            if (Math.abs(accel) > maxAcceleration[dim]) {
+              throw new Error(
+                `Trajectory exceeds maxAcceleration in dimension ${dim}: ` +
+                  `|${accel}| > ${maxAcceleration[dim]} in segment ${seg}.`,
+              );
+            }
           }
         }
       }

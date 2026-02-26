@@ -82,6 +82,10 @@ export class CubicSplineTrajectory implements Trajectory {
     return this.waypoints[this.waypoints.length - 1].time;
   }
 
+  getCoeffsByDim(): SplineCoeffs[][] {
+    return this.coeffsByDim;
+  }
+
   private _findSegment(t: number): number {
     const idx = this._lastSegmentIndex;
     if (idx < this.waypoints.length - 1 && this.waypoints[idx].time <= t && t < this.waypoints[idx + 1].time) {
