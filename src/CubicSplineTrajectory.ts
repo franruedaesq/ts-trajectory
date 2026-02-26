@@ -57,6 +57,7 @@ export class CubicSplineTrajectory implements Trajectory {
   private readonly coeffsByDim: SplineCoeffs[][];
   private readonly _result: number[];
   private readonly _derivativeResult: number[];
+  private readonly _secondDerivativeResult: number[];
 
   constructor(waypoints: Waypoint[]) {
     this.waypoints = waypoints;
@@ -68,6 +69,7 @@ export class CubicSplineTrajectory implements Trajectory {
     });
     this._result = new Array(dims).fill(0);
     this._derivativeResult = new Array(dims).fill(0);
+    this._secondDerivativeResult = new Array(dims).fill(0);
   }
 
   getDuration(): number {
@@ -108,6 +110,42 @@ export class CubicSplineTrajectory implements Trajectory {
       this._derivativeResult[i] = b + 2 * c * dt + 3 * d * dt * dt;
     }
     return this._derivativeResult;
+  }
+
+  sampleSecondDerivative(t: number): number[] {
+    const first = this.waypoints[0];
+    const last = this.waypoints[this.waypoints.length - 1];
+    const dims = this._secondDerivativeResult.length;
+
+    if (t <= first.time) {
+      for (let i = 0; i < dims; i++) this._secondDerivativeResult[i] = 2 * this.coeffsByDim[i][0].c;
+      return this._secondDerivativeResult;
+    }
+    if (t >= last.time) {
+      const seg = this.waypoints.length - 2;
+      const h = last.time - this.waypoints[seg].time;
+      for (let i = 0; i < dims; i++) {
+        const { c, d } = this.coeffsByDim[i][seg];
+        this._secondDerivativeResult[i] = 2 * c + 6 * d * h;
+      }
+      return this._secondDerivativeResult;
+    }
+
+    // Binary search for segment
+    let lo = 0;
+    let hi = this.waypoints.length - 2;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (this.waypoints[mid].time <= t) lo = mid;
+      else hi = mid - 1;
+    }
+
+    const dt = t - this.waypoints[lo].time;
+    for (let i = 0; i < dims; i++) {
+      const { c, d } = this.coeffsByDim[i][lo];
+      this._secondDerivativeResult[i] = 2 * c + 6 * d * dt;
+    }
+    return this._secondDerivativeResult;
   }
 
   sample(t: number): number[] {

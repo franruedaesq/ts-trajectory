@@ -52,6 +52,61 @@ describe('TrajectoryPlanner', () => {
       ),
     ).toThrow();
   });
+
+  it('throws if maxVelocity dimensions do not match waypoints', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'linear', maxVelocity: [1] }),
+    ).toThrow('maxVelocity must have the same number of dimensions as waypoints.');
+  });
+
+  it('throws if maxAcceleration dimensions do not match waypoints', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'linear', maxAcceleration: [1] }),
+    ).toThrow('maxAcceleration must have the same number of dimensions as waypoints.');
+  });
+
+  it('does not throw when linear trajectory is within maxVelocity', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'linear', maxVelocity: [10, 10] }),
+    ).not.toThrow();
+  });
+
+  it('throws when linear trajectory exceeds maxVelocity', () => {
+    // segment 0->1: vel_dim0 = 1/1 = 1, vel_dim1 = 2/1 = 2
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'linear', maxVelocity: [10, 1] }),
+    ).toThrow('maxVelocity');
+  });
+
+  it('does not throw when linear trajectory is within maxAcceleration (always zero)', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'linear', maxAcceleration: [0, 0] }),
+    ).not.toThrow();
+  });
+
+  it('does not throw when cubic trajectory is within maxVelocity', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'cubic', maxVelocity: [100, 100] }),
+    ).not.toThrow();
+  });
+
+  it('throws when cubic trajectory exceeds maxVelocity', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'cubic', maxVelocity: [0.001, 0.001] }),
+    ).toThrow('maxVelocity');
+  });
+
+  it('does not throw when cubic trajectory is within maxAcceleration', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'cubic', maxAcceleration: [1000, 1000] }),
+    ).not.toThrow();
+  });
+
+  it('throws when cubic trajectory exceeds maxAcceleration', () => {
+    expect(() =>
+      planner.plan(waypoints, { interpolationType: 'cubic', maxAcceleration: [0.001, 0.001] }),
+    ).toThrow('maxAcceleration');
+  });
 });
 
 describe('isWaypoint', () => {
