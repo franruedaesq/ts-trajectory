@@ -1,6 +1,6 @@
 {
   "name": "ts-trajectory",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A lightweight, highly performant, zero-dependency TypeScript library for generating multi-dimensional, time-parameterized trajectories.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
