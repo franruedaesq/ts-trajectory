@@ -1,0 +1,17 @@
+{
+  "name": "trajectory-core",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "trajectory_core_bg.wasm",
+    "trajectory_core.js",
+    "trajectory_core_bg.js",
+    "trajectory_core.d.ts"
+  ],
+  "main": "trajectory_core.js",
+  "types": "trajectory_core.d.ts",
+  "sideEffects": [
+    "./trajectory_core.js",
+    "./snippets/*"
+  ]
+}
