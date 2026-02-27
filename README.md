@@ -98,4 +98,4 @@ interface PlannerConfig {
 - **UI Animation:** Creating complex, multi-property CSS/Canvas animations that need to hit specific keyframes at exact times.
 
 ## License
-MIT
+[MIT](LICENSE)
