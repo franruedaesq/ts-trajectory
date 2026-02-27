@@ -1,6 +1,30 @@
 import { solveTridiagonal } from './MathUtils';
 import { Trajectory, Waypoint } from './types';
 
+// Attempt to load the Rust/WASM backend. If unavailable the pure-TypeScript
+// implementation is used transparently.
+interface WasmCubicSplineTrajectory {
+  get_duration(): number;
+  get_coeffs_flat(): Float64Array;
+  sample(t: number): Float64Array;
+  sample_derivative(t: number): Float64Array;
+  sample_second_derivative(t: number): Float64Array;
+  free(): void;
+}
+interface WasmCubicSplineConstructor {
+  new (waypoints: unknown): WasmCubicSplineTrajectory;
+}
+let WasmBackend: WasmCubicSplineConstructor | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('../pkg-node/trajectory_core') as {
+    CubicSplineTrajectory: WasmCubicSplineConstructor;
+  };
+  WasmBackend = mod.CubicSplineTrajectory;
+} catch {
+  // WASM unavailable; pure-TS fallback will be used.
+}
+
 interface SplineCoeffs {
   a: number;
   b: number;
@@ -59,6 +83,7 @@ export class CubicSplineTrajectory implements Trajectory {
   private readonly _derivativeResult: number[];
   private readonly _secondDerivativeResult: number[];
   private _lastSegmentIndex: number = 0;
+  private readonly _wasm: WasmCubicSplineTrajectory | null;
 
   constructor(waypoints: Waypoint[]) {
     for (let i = 1; i < waypoints.length; i++) {
@@ -76,13 +101,30 @@ export class CubicSplineTrajectory implements Trajectory {
     this._result = new Array(dims).fill(0);
     this._derivativeResult = new Array(dims).fill(0);
     this._secondDerivativeResult = new Array(dims).fill(0);
+    this._wasm = WasmBackend ? new WasmBackend(waypoints) : null;
   }
 
   getDuration(): number {
+    if (this._wasm) return this._wasm.get_duration();
     return this.waypoints[this.waypoints.length - 1].time;
   }
 
   getCoeffsByDim(): SplineCoeffs[][] {
+    if (this._wasm) {
+      const flat = this._wasm.get_coeffs_flat();
+      const dims = this._result.length;
+      const nSegs = this.waypoints.length - 1;
+      const result: SplineCoeffs[][] = [];
+      for (let dim = 0; dim < dims; dim++) {
+        const dimCoeffs: SplineCoeffs[] = [];
+        for (let seg = 0; seg < nSegs; seg++) {
+          const offset = (dim * nSegs + seg) * 4;
+          dimCoeffs.push({ a: flat[offset], b: flat[offset + 1], c: flat[offset + 2], d: flat[offset + 3] });
+        }
+        result.push(dimCoeffs);
+      }
+      return result;
+    }
     return this.coeffsByDim;
   }
 
@@ -103,6 +145,12 @@ export class CubicSplineTrajectory implements Trajectory {
   }
 
   sampleDerivative(t: number): number[] {
+    if (this._wasm) {
+      const raw = this._wasm.sample_derivative(t);
+      for (let i = 0; i < this._derivativeResult.length; i++) this._derivativeResult[i] = raw[i];
+      return this._derivativeResult;
+    }
+
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
     const dims = this._derivativeResult.length;
@@ -133,6 +181,12 @@ export class CubicSplineTrajectory implements Trajectory {
   }
 
   sampleSecondDerivative(t: number): number[] {
+    if (this._wasm) {
+      const raw = this._wasm.sample_second_derivative(t);
+      for (let i = 0; i < this._secondDerivativeResult.length; i++) this._secondDerivativeResult[i] = raw[i];
+      return this._secondDerivativeResult;
+    }
+
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
     const dims = this._secondDerivativeResult.length;
@@ -163,6 +217,12 @@ export class CubicSplineTrajectory implements Trajectory {
   }
 
   sample(t: number): number[] {
+    if (this._wasm) {
+      const raw = this._wasm.sample(t);
+      for (let i = 0; i < this._result.length; i++) this._result[i] = raw[i];
+      return this._result;
+    }
+
     const first = this.waypoints[0];
     const last = this.waypoints[this.waypoints.length - 1];
     const dims = this._result.length;

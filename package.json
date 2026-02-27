@@ -19,12 +19,15 @@
   },
   "files": [
     "dist",
+    "pkg",
+    "pkg-node",
     "README.md",
     "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build:wasm": "wasm-pack build trajectory-core --target bundler --out-dir ../pkg && wasm-pack build trajectory-core --target nodejs --out-dir ../pkg-node",
+    "build": "npm run build:wasm && tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src --ext .ts",
